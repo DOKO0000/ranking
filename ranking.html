@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ranking Global</title>
+</head>
+<body>
+    <h1>🏆 Top Jugadores PvP</h1>
+    <table border="1" id="rankingTable" style="width: 80%; margin: auto;">
+        <thead>
+            <tr>
+                <th>Posición</th>
+                <th>Jugador</th>
+                <th>Victorias</th>
+            </tr>
+        </thead>
+        <tbody id="rankingBody"></tbody>
+    </table>
+    <br>
+    <a href="index.html">Volver al Inicio</a>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = { databaseURL: "https://ayudaaa-98eff-default-rtdb.firebaseio.com/" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const listRef = ref(db, 'usuarios/');
+        onValue(listRef, (snap) => {
+            const data = snap.val();
+            const body = document.getElementById('rankingBody');
+            body.innerHTML = "";
+
+            if(data) {
+                const sorted = Object.values(data).sort((a, b) => b.victorias - a.victorias);
+                sorted.forEach((u, i) => {
+                    body.innerHTML += `<tr><td>${i+1}</td><td>${u.nombre}</td><td>${u.victorias}</td></tr>`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

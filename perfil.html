@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Perfil - Roblox PvP</title>
+</head>
+<body>
+    <div class="profile-container">
+        <h2>Bienvenido, <span id="userName">...</span></h2>
+        <div class="stats">
+            <p>Tus Victorias: <strong id="userWins">0</strong></p>
+            <button onclick="reportarWin()" style="background: green; color: white;">¡GANÉ UN PVP!</button>
+        </div>
+        <br>
+        <button onclick="logout()">Cerrar Sesión</button>
+        <a href="ranking.html">Ir al Ranking</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = { databaseURL: "https://ayudaaa-98eff-default-rtdb.firebaseio.com/" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const currentUser = localStorage.getItem("sessionUser");
+        if(!currentUser) window.location.href = "index.html";
+
+        const userRef = ref(db, 'usuarios/' + currentUser);
+
+        // Escuchar datos en tiempo real
+        onValue(userRef, (snap) => {
+            const data = snap.val();
+            document.getElementById('userName').innerText = data.nombre;
+            document.getElementById('userWins').innerText = data.victorias;
+        });
+
+        window.reportarWin = () => {
+            update(userRef, { victorias: increment(1) });
+            alert("¡Victoria sumada!");
+        };
+
+        window.logout = () => {
+            localStorage.removeItem("sessionUser");
+            window.location.href = "index.html";
+        };
+    </script>
+</body>
+</html>
