@@ -2,23 +2,30 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mi Perfil - Roblox PvP</title>
+    <title>Perfil PvP</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="profile-container">
-        <h2>Bienvenido, <span id="userName">...</span></h2>
-        <div class="stats">
-            <p>Tus Victorias: <strong id="userWins">0</strong></p>
-            <button onclick="reportarWin()" style="background: green; color: white;">¡GANÉ UN PVP!</button>
+    <div class="container">
+        <h2>Panel de <span id="userName" style="color:var(--rbx-blue)">...</span></h2>
+        <h1 id="userWins">0</h1>
+        <p>Victorias Confirmadas</p>
+
+        <hr>
+
+        <h3>Reportar Nueva Victoria</h3>
+        <input type="text" id="rivalName" placeholder="Nombre del rival exacto">
+        <button class="btn-primary" onclick="enviarReporte()">Enviar Solicitud de Victoria</button>
+
+        <div id="pendientesSection" style="margin-top:20px; border: 1px solid var(--rbx-blue); padding: 10px;">
+            <h4>Confirmaciones Pendientes</h4>
+            <div id="listaPendientes"></div>
         </div>
-        <br>
-        <button onclick="logout()">Cerrar Sesión</button>
-        <a href="ranking.html">Ir al Ranking</a>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, onValue, update, increment, set, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = { databaseURL: "https://ayudaaa-98eff-default-rtdb.firebaseio.com/" };
         const app = initializeApp(firebaseConfig);
@@ -27,24 +34,49 @@
         const currentUser = localStorage.getItem("sessionUser");
         if(!currentUser) window.location.href = "index.html";
 
-        const userRef = ref(db, 'usuarios/' + currentUser);
-
-        // Escuchar datos en tiempo real
-        onValue(userRef, (snap) => {
-            const data = snap.val();
-            document.getElementById('userName').innerText = data.nombre;
-            document.getElementById('userWins').innerText = data.victorias;
+        // Actualizar estadísticas del perfil
+        onValue(ref(db, 'usuarios/' + currentUser), (snap) => {
+            if(snap.exists()){
+                document.getElementById('userName').innerText = snap.val().nombre;
+                document.getElementById('userWins').innerText = snap.val().victorias;
+            }
         });
 
-        window.reportarWin = () => {
-            update(userRef, { victorias: increment(1) });
-            alert("¡Victoria sumada!");
+        // Ver si alguien dice que me ganó para yo confirmarlo
+        onValue(ref(db, `validaciones/${currentUser}`), (snap) => {
+            const lista = document.getElementById('listaPendientes');
+            lista.innerHTML = "";
+            const data = snap.val();
+            if(data) {
+                Object.keys(data).forEach(rival => {
+                    lista.innerHTML += `
+                        <p>${rival} dice que te ganó. ¿Es cierto? 
+                        <button class="btn-success" onclick="confirmarDuelo('${rival}')">Sí, perdí</button>
+                        </p>`;
+                });
+            } else { lista.innerHTML = "No tienes duelos por confirmar."; }
+        });
+
+        // Paso 1: Yo digo que gané
+        window.enviarReporte = async () => {
+            const rival = document.getElementById('rivalName').value.trim().toLowerCase();
+            if(!rival || rival === currentUser) return alert("Rival inválido");
+            
+            // Creamos una solicitud en la bandeja del rival
+            await set(ref(db, `validaciones/${rival}/${currentUser}`), true);
+            alert("Solicitud enviada. Tu rival debe confirmarla en su perfil.");
         };
 
-        window.logout = () => {
-            localStorage.removeItem("sessionUser");
-            window.location.href = "index.html";
+        // Paso 2: El rival acepta que perdió
+        window.confirmarDuelo = async (ganador) => {
+            // 1. Sumar victoria al ganador
+            await update(ref(db, `usuarios/${ganador}`), { victorias: increment(1) });
+            // 2. Borrar la solicitud
+            await remove(ref(db, `validaciones/${currentUser}/${ganador}`));
+            alert("Resultado confirmado. Victoria sumada al rival.");
         };
+
+        window.confirmarDuelo = confirmarDuelo; // Hacerla global para el onclick
     </script>
 </body>
 </html>
