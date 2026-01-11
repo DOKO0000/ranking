@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox PvP Ranking</title>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get, update, child, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Tu configuración basada en la URL que pasaste
+        const firebaseConfig = {
+            databaseURL: "https://ayudaaa-98eff-default-rtdb.firebaseio.com/",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- LÓGICA DE USUARIOS ---
+        
+        async function ingresar() {
+            const user = document.getElementById('username').value.trim();
+            if(!user) return alert("Ingresa un usuario");
+
+            const dbRef = ref(db);
+            const snapshot = await get(child(dbRef, `usuarios/${user}`));
+
+            if (snapshot.exists()) {
+                sessionStorage.setItem("currentUser", user);
+                cargarPerfil(snapshot.val());
+            } else {
+                // Registro nuevo
+                const nuevoUser = {
+                    nombre: user,
+                    victorias: 0,
+                    idRoblox: Math.floor(Math.random() * 1000000) // Simulado
+                };
+                await set(ref(db, 'usuarios/' + user), nuevoUser);
+                sessionStorage.setItem("currentUser", user);
+                cargarPerfil(nuevoUser);
+                alert("¡Usuario registrado!");
+            }
+        }
+
+        async function ganarPvP() {
+            const user = sessionStorage.getItem("currentUser");
+            if(!user) return alert("Inicia sesión primero");
+
+            const dbRef = ref(db, `usuarios/${user}`);
+            const snapshot = await get(dbRef);
+            const nuevasVictorias = (snapshot.val().victorias || 0) + 1;
+
+            await update(dbRef, { victorias: nuevasVictorias });
+            alert("¡Victoria registrada!");
+        }
+
+        // --- RANKING EN TIEMPO REAL ---
+        const listaRanking = ref(db, 'usuarios/');
+        onValue(listaRanking, (snapshot) => {
+            const data = snapshot.val();
+            const rankingBody = document.getElementById('rankingBody');
+            rankingBody.innerHTML = "";
+
+            if (data) {
+                // Convertir objeto a array y ordenar
+                const usuariosArray = Object.values(data).sort((a, b) => b.victorias - a.victorias);
+                
+                usuariosArray.forEach((u, index) => {
+                    rankingBody.innerHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${u.nombre}</td>
+                            <td>${u.victorias} 🏆</td>
+                        </tr>
+                    `;
+                });
+            }
+        });
+
+        function cargarPerfil(data) {
+            document.getElementById('loginSection').style.display = "none";
+            document.getElementById('perfilSection').style.display = "block";
+            document.getElementById('displayUser').innerText = data.nombre;
+        }
+
+        window.ingresar = ingresar;
+        window.ganarPvP = ganarPvP;
+    </script>
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1b1d1f; color: white; text-align: center; }
+        .container { max-width: 500px; margin: auto; padding: 20px; }
+        .box { background: #2b2d30; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #444; }
+        input { padding: 10px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; }
+        button { padding: 10px 20px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        table { width: 100%; margin-top: 20px; background: #2b2d30; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 12px; border-bottom: 1px solid #444; }
+        th { background: #3e4144; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏆 Ranking PvP Roblox</h1>
+
+    <div id="loginSection" class="box">
+        <h3>Ingresa con tu User de Roblox</h3>
+        <input type="text" id="username" placeholder="Nombre de usuario...">
+        <button class="btn-blue" onclick="ingresar()">Entrar / Registrar</button>
+    </div>
+
+    <div id="perfilSection" class="box" style="display:none;">
+        <h3>Bienvenido, <span id="displayUser"></span></h3>
+        <button class="btn-green" onclick="ganarPvP()">Reportar Victoria</button>
+    </div>
+
+    <h3>Top Jugadores</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Usuario</th>
+                <th>Victorias</th>
+            </tr>
+        </thead>
+        <tbody id="rankingBody">
+            </tbody>
+    </table>
+</div>
+
+</body>
+</html>
