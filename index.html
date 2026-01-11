@@ -2,123 +2,41 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox PvP - Registro y Ranking</title>
-    
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #232527; color: white; margin: 0; }
-        .navbar-search { padding: 20px; background: #393b3d; display: flex; justify-content: center; flex-direction: column; align-items: center; }
-        .input-group { display: flex; width: 300px; }
-        .form-control { flex: 1; padding: 10px; border: none; border-radius: 4px 0 0 4px; }
-        .input-addon-btn { background: #0084ff; border: none; color: white; padding: 10px; border-radius: 0 4px 4px 0; cursor: pointer; }
-        .ranking-container { max-width: 800px; margin: 40px auto; padding: 20px; }
-        table { width: 100%; background: #2e3033; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #444; }
-        th { background: #191b1d; color: #00b06f; }
-        #user-dashboard { background: #00b06f; padding: 10px; border-radius: 5px; margin-top: 10px; display: none; }
-    </style>
-</head>
+    <title>Acceso - Roblox PvP</title>
+    <link rel="stylesheet" href="style.css"> </head>
 <body>
-
-    <div class="navbar-search">
-        <div id="login-panel">
-            <h2 style="font-size: 1.2rem;">Registra tu Usuario de Roblox</h2>
-            <div class="input-group">
-                <input id="navbar-search-input" type="search" class="form-control" placeholder="Nombre de usuario" autocomplete="off">
-                <button class="input-addon-btn" onclick="gestionarSesion()">ENTRAR</button>
-            </div>
+    <div class="auth-container">
+        <h1>🎮 PvP Battle Logs</h1>
+        <div class="box">
+            <input id="username" type="text" placeholder="Tu Usuario de Roblox">
+            <button onclick="auth()">Entrar / Registrarse</button>
         </div>
-
-        <div id="user-dashboard">
-            <span>Bienvenido, <strong id="active-username"></strong>!</span>
-            <button onclick="location.reload()" style="margin-left:10px; cursor:pointer;">Cerrar Sesión</button>
-        </div>
-        <p id="search-status" style="font-size: 0.8rem; margin-top: 10px;"></p>
-    </div>
-
-    <div class="ranking-container">
-        <h3>🏆 Ranking de Usuarios Registrados</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Rango</th>
-                    <th>Usuario</th>
-                    <th>Victorias</th>
-                </tr>
-            </thead>
-            <tbody id="rankingBody">
-                </tbody>
-        </table>
+        <p id="msg"></p>
+        <a href="ranking.html">Ver Ranking Global</a>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Tu URL de Realtime Database
-        const firebaseConfig = {
-            databaseURL: "https://ayudaaa-98eff-default-rtdb.firebaseio.com/",
-        };
-
+        const firebaseConfig = { databaseURL: "https://ayudaaa-98eff-default-rtdb.firebaseio.com/" };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // FUNCIÓN DE SESIÓN
-        async function gestionarSesion() {
-            const username = document.getElementById('navbar-search-input').value.trim();
-            if (!username) return alert("Ingresa un usuario");
+        window.auth = async () => {
+            const user = document.getElementById('username').value.trim().toLowerCase();
+            if(!user) return;
 
-            const userRef = ref(db, 'usuarios/' + username.toLowerCase());
+            const userRef = ref(db, 'usuarios/' + user);
+            const snap = await get(userRef);
+
+            if(!snap.exists()) {
+                await set(userRef, { nombre: user, victorias: 0, registrado: Date.now() });
+            }
             
-            try {
-                const snapshot = await get(userRef);
-                let datos;
-
-                if (snapshot.exists()) {
-                    datos = snapshot.val();
-                } else {
-                    // Si no existe, lo registra por primera vez
-                    datos = {
-                        nombre: username,
-                        victorias: 0,
-                        registradoEl: Date.now()
-                    };
-                    await set(userRef, datos);
-                }
-
-                // Guardar sesión y actualizar UI
-                sessionStorage.setItem("activeUser", username);
-                document.getElementById('login-panel').style.display = "none";
-                document.getElementById('user-dashboard').style.display = "block";
-                document.getElementById('active-username').innerText = datos.nombre;
-                
-            } catch (error) {
-                console.error("Error:", error);
-            }
-        }
-
-        // CARGAR RANKING EN TIEMPO REAL
-        const listaRef = ref(db, 'usuarios/');
-        onValue(listaRef, (snapshot) => {
-            const data = snapshot.val();
-            const rankingBody = document.getElementById('rankingBody');
-            rankingBody.innerHTML = "";
-
-            if (data) {
-                const sorted = Object.values(data).sort((a, b) => b.victorias - a.victorias);
-                sorted.forEach((user, i) => {
-                    rankingBody.innerHTML += `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td>${user.nombre}</td>
-                            <td>${user.victorias}</td>
-                        </tr>
-                    `;
-                });
-            }
-        });
-
-        window.gestionarSesion = gestionarSesion;
+            localStorage.setItem("sessionUser", user);
+            window.location.href = "perfil.html";
+        };
     </script>
 </body>
 </html>
